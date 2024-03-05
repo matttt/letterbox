@@ -34,7 +34,7 @@ interface DotProps {
     canBeSelected: boolean
 }
 
-function Dot({ x, y, side, letter, squareSize, onClick, partOfWord, currentlySelectedLetter,hasBeenSelected ,canBeSelected}: DotProps) {
+function Dot({ x, y, side, letter, squareSize, onClick, partOfWord, currentlySelectedLetter, hasBeenSelected, canBeSelected }: DotProps) {
     const offsets = {
         [Side.top]: [0, -.9],
         [Side.bottom]: [0, 1.2],
@@ -51,7 +51,7 @@ function Dot({ x, y, side, letter, squareSize, onClick, partOfWord, currentlySel
             strokeWidth="3"
             stroke={partOfWord ? PINK : "#000"}
             fill={currentlySelectedLetter ? "#000" : "#FFF"}
-            cursor={canBeSelected?"pointer":""} // Add cursor property to make mouse icon a hand
+            cursor={canBeSelected ? "pointer" : ""} // Add cursor property to make mouse icon a hand
             r={isMobile ? squareSize / 30 : squareSize / 40}
             onClick={() => onClick()} />
         <text
@@ -62,7 +62,7 @@ function Dot({ x, y, side, letter, squareSize, onClick, partOfWord, currentlySel
             fontSize={squareSize / 10}
             fontWeight="500"
             fill={(partOfWord || hasBeenSelected) ? "#000" : "#FFF"}
-            cursor={canBeSelected?"pointer":""} // Add cursor property to make mouse icon a hand
+            cursor={canBeSelected ? "pointer" : ""} // Add cursor property to make mouse icon a hand
             onClick={() => onClick()}>
             {letter}
         </text>
@@ -100,7 +100,7 @@ export function Game() {
     });
 
     useKeyPress(['Enter'], (event) => {
-        submitWord  ();
+        submitWord();
     });
 
     const { width, height } = useWindowSize();
@@ -122,8 +122,8 @@ export function Game() {
     const getLastLetter = (): LetterStep | null => {
         return prevWords.at(-1)?.at(-1) || null
     }
-    
-    const canClickLetter = ({side, idx}: LetterStep) => {
+
+    const canClickLetter = ({ side, idx }: LetterStep) => {
         const letter = boardData[side][idx];
 
         if (side === letterSteps?.at(-1)?.side) {
@@ -137,7 +137,7 @@ export function Game() {
 
     const currentlyAssembledWord = letterSteps.map(step => boardData[step.side][step.idx]).join('')
 
-    const hasLetterBeenVisited = ({side, idx}: LetterStep) => {
+    const hasLetterBeenVisited = ({ side, idx }: LetterStep) => {
 
         const allPrevs = prevWords.reduce((acc, val) => acc.concat(val), [])
         const allSteps = [...letterSteps, ...allPrevs]
@@ -209,9 +209,9 @@ export function Game() {
             squareSize,
             partOfWord: letterSteps.some(step => step.side === side && step.idx === idx),
             currentlySelectedLetter: letterSteps.at(-1)?.side === side && letterSteps.at(-1)?.idx === idx,
-            hasBeenSelected: hasLetterBeenVisited({side, idx}),
+            hasBeenSelected: hasLetterBeenVisited({ side, idx }),
             onClick: () => handleLetterClick({ idx, side }),
-            canBeSelected: canClickLetter({side,idx})
+            canBeSelected: canClickLetter({ side, idx })
         }
 
         return <Dot key={idx} {...props} />
@@ -267,16 +267,16 @@ export function Game() {
         const wordEls = []
         let i = 0
 
-        for (const [idx,word] of Object.entries(wordStrings)) {
+        for (const [idx, word] of Object.entries(wordStrings)) {
             const elements = [];
             for (const letter of word) {
-                elements.push(<span key={`${idx}-${i++}`} style={{color: (seenLetterSet.has(letter)) ? '#5F4442' : 'black'}}>{letter}</span>)
+                elements.push(<span key={`${idx}-${i++}`} style={{ color: (seenLetterSet.has(letter)) ? '#5F4442' : 'black' }}>{letter}</span>)
 
                 seenLetterSet.add(letter)
             }
             wordEls.push(...elements)
-            if (Number(idx)+1 < wordStrings.length) {
-                wordEls.push(<span key={`${idx}-${i++}`} style={{color: 'white'}}> - </span>)
+            if (Number(idx) + 1 < wordStrings.length) {
+                wordEls.push(<span key={`${idx}-${i++}`} style={{ color: 'white' }}> - </span>)
             }
         }
 
@@ -285,19 +285,19 @@ export function Game() {
         progressWords = wordEls
     }
 
-    return <div className="flex">
+    return <div className="flex flex-col md:flex-row">
         <div className="grow"></div>
-        <div className="w-96 flex flex-col">
+        <div className="w-full flex flex-col md:w-96">
             <div className="grow"></div>
             <div className="flex justify-center">
                 <div className="flex flex-col w-full">
                     <h1 className="text-4xl font-bold text-center h-10">{currentlyAssembledWord}</h1>
                     <div className="h-3"></div>
-                    <div className="w-full border border-black border-[3px]"></div>
+                    <div className="w-full border border-black border-[3px] md:w-50"></div>
                     <div className="h-3"></div>
                     <div className="text-xl font-bold text-center">{progressWords}</div>
                     <div className="h-5"></div>
-                    <div className="flex">
+                    <div className="hidden md:flex">
                         <div className="grow"></div>
                         <PillButton text="Restart" onClick={restartPuzzle} />
                         <div className="w-2"></div>
@@ -312,21 +312,35 @@ export function Game() {
         </div>
 
         <div className="w-12"></div>
-        <svg width={svgSize} height={svgSize}>
-            <g transform={`translate(${margin}, ${margin})`}>
-                <rect width={squareSize} height={squareSize} stroke="black" strokeWidth="3" fill="#FFF" />
-                {prevLines}
-                {lines}
-                {/* top dots */}
-                {createDots(Side.top)}
-                {/* bottom dots */}
-                {createDots(Side.bottom)}
-                {/* left dots */}
-                {createDots(Side.left)}
-                {/* right dots */}
-                {createDots(Side.right)}
-            </g>
-        </svg>
+        <div className="flex">
+            <div className="grow"></div>
+                <svg width={svgSize} height={svgSize}>
+                    <g transform={`translate(${margin}, ${margin})`}>
+                        <rect width={squareSize} height={squareSize} stroke="black" strokeWidth="3" fill="#FFF" />
+                        {prevLines}
+                        {lines}
+                        {/* top dots */}
+                        {createDots(Side.top)}
+                        {/* bottom dots */}
+                        {createDots(Side.bottom)}
+                        {/* left dots */}
+                        {createDots(Side.left)}
+                        {/* right dots */}
+                        {createDots(Side.right)}
+                    </g>
+                </svg>
+            <div className="grow"></div>
+        </div>
+        {isMobile && <div className="h-20"/>}
+        <div className="flex md:hidden">
+            <div className="grow"></div>
+            <PillButton text="Restart" onClick={restartPuzzle} />
+            <div className="w-2"></div>
+            <PillButton text="Delete" onClick={deleteLetter} />
+            <div className="w-2"></div>
+            <PillButton text="Enter" onClick={submitWord} />
+            <div className="grow"></div>
+        </div>
         <div className="grow"></div>
-    </div>
+    </div >
 }
