@@ -1,9 +1,10 @@
 import { useWindowSize } from "@uidotdev/usehooks";
 import { useKeyPress } from 'ahooks';
-import { off } from "process";
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Snackbar from '@mui/material/Snackbar';
 import { isMobile } from 'react-device-detect';
 import { CEL } from './cel'
+import Confetti from 'react-confetti'
 
 const PINK = "rgb(250, 166, 164)"
 
@@ -85,8 +86,18 @@ function PillButton({ onClick, text }: PillButtonProps) {
 }
 
 export function Game() {
+    const [isClient, setIsClient] = useState<boolean>(false)
     const [prevWords, setPrevWords] = useState<LetterStep[][]>([])
     const [letterSteps, setLetterSteps] = useState<LetterStep[]>([])
+    const [snackOpen, setSnackOpen] = useState(false)
+
+    const handleSnackClose = () => {
+        setSnackOpen(false)
+    }
+
+    useEffect(() => {
+        setIsClient(true)
+    }, [])
 
     const boardData: GameBoard = {
         top: ['G', 'I', 'A'],
@@ -94,6 +105,9 @@ export function Game() {
         right: ['L', 'S', 'E'],
         bottom: ['R', 'V', 'T']
     }
+
+    const usedLetterSteps = prevWords.reduce((acc, val) => acc.concat(val), [])
+    const isWin = new Set(usedLetterSteps.map(ls => boardData[ls.side][ls.idx])).size === 12
 
     useKeyPress(['Backspace'], (event) => {
         deleteLetter();
@@ -171,7 +185,7 @@ export function Game() {
             const lastLetter = letterSteps.at(-1);
             lastLetter && setLetterSteps([lastLetter])
         } else {
-            alert('Invalid word')
+            setSnackOpen(true)
         }
     }
 
@@ -279,13 +293,19 @@ export function Game() {
                 wordEls.push(<span key={`${idx}-${i++}`} style={{ color: 'white' }}> - </span>)
             }
         }
-
-        console.log(wordEls)
-
         progressWords = wordEls
     }
 
     return <div className="flex flex-col md:flex-row">
+        <Snackbar
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            open={snackOpen}
+            onClose={handleSnackClose}
+            message="Not a word"
+            autoHideDuration={2500}
+            // key={vertical + horizontal}
+        />
+        {(isClient && isWin) && <Confetti recycle={false} />}
         <div className="grow"></div>
         <div className="w-full flex flex-col md:w-96">
             <div className="grow"></div>
@@ -314,24 +334,24 @@ export function Game() {
         <div className="w-12"></div>
         <div className="flex">
             <div className="grow"></div>
-                <svg width={svgSize} height={svgSize}>
-                    <g transform={`translate(${margin}, ${margin})`}>
-                        <rect width={squareSize} height={squareSize} stroke="black" strokeWidth="3" fill="#FFF" />
-                        {prevLines}
-                        {lines}
-                        {/* top dots */}
-                        {createDots(Side.top)}
-                        {/* bottom dots */}
-                        {createDots(Side.bottom)}
-                        {/* left dots */}
-                        {createDots(Side.left)}
-                        {/* right dots */}
-                        {createDots(Side.right)}
-                    </g>
-                </svg>
+            <svg width={svgSize} height={svgSize}>
+                <g transform={`translate(${margin}, ${margin})`}>
+                    <rect width={squareSize} height={squareSize} stroke="black" strokeWidth="3" fill="#FFF" />
+                    {prevLines}
+                    {lines}
+                    {/* top dots */}
+                    {createDots(Side.top)}
+                    {/* bottom dots */}
+                    {createDots(Side.bottom)}
+                    {/* left dots */}
+                    {createDots(Side.left)}
+                    {/* right dots */}
+                    {createDots(Side.right)}
+                </g>
+            </svg>
             <div className="grow"></div>
         </div>
-        {isMobile && <div className="h-20"/>}
+        {(isMobile && isClient) && <div className="h-20" />}
         <div className="flex md:hidden">
             <div className="grow"></div>
             <PillButton text="Restart" onClick={restartPuzzle} />
