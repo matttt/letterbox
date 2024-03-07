@@ -4,6 +4,7 @@ export const CEL = [
     "aardvark",
     "aardvarks",
     "ab",
+    "brazy",
     "aback",
     "abacus",
     "abacuses",
