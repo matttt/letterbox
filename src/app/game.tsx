@@ -121,10 +121,10 @@ export function Game() {
     }, [])
 
     const boardData: GameBoard = {
-        top: ['G', 'I', 'A'],
-        left: ['W', 'H', 'O'],
-        right: ['L', 'S', 'E'],
-        bottom: ['R', 'V', 'T']
+        top: ['W', 'B', 'S'],
+        left: ['E', 'C', 'R'],
+        right: ['K', 'L', 'Z'],
+        bottom: ['A', 'D', 'Y']
     }
 
     const usedLetterSteps = prevWords.reduce((acc, val) => acc.concat(val), [])
@@ -336,7 +336,7 @@ export function Game() {
         />
     })).reduce((acc, val) => acc.concat(val), []);
 
-    let progressWords = [<span key="blah">Try to solve in 4 words</span>]
+    let progressWords = [<span key="blah">Try to solve in 6 words</span>]
 
     if (prevWords.length > 0) {
         const wordStrings = prevWords.map(pw => pw.map(ls => boardData[ls.side][ls.idx]).join(''))
