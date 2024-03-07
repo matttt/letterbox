@@ -1,10 +1,12 @@
 import { useWindowSize } from "@uidotdev/usehooks";
 import { useKeyPress } from 'ahooks';
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Snackbar from '@mui/material/Snackbar';
 import { isMobile } from 'react-device-detect';
 import { CEL } from './cel'
 import Confetti from 'react-confetti'
+import gsap from "gsap"; // <-- import GSAP
+import { useGSAP } from "@gsap/react";
 
 const PINK = "rgb(250, 166, 164)"
 
@@ -29,9 +31,9 @@ interface DotProps {
     letter: string,
     squareSize: number
     onClick: () => void
-    partOfWord: boolean
-    currentlySelectedLetter: boolean
-    hasBeenSelected: boolean,
+    partOfWord: boolean // part of current word
+    currentlySelectedLetter: boolean //is currently selected letter
+    hasBeenSelected: boolean, // has been used in a previous word or in current word
     canBeSelected: boolean
 }
 
@@ -45,13 +47,27 @@ function Dot({ x, y, side, letter, squareSize, onClick, partOfWord, currentlySel
 
     const [dx, dy] = offsets[side].map(o => o * squareSize / 10)
 
-    return <g>
+    const getStrokeAndFill = (): [string, string] => { // [stroke, fill]
+        if (currentlySelectedLetter) {
+            return [PINK, '#000']
+        } else if (partOfWord) {
+            return [PINK, '#FFF']
+        } else if (hasBeenSelected) {
+            return ["#000", PINK]
+        }
+
+        return ["#000", "#FFF"]
+    }
+
+    const [stroke, fill] = getStrokeAndFill()
+
+    return <g className="letter">
         <circle
             cx={x}
             cy={y}
             strokeWidth="3"
-            stroke={partOfWord ? PINK : "#000"}
-            fill={currentlySelectedLetter ? "#000" : "#FFF"}
+            stroke={stroke}
+            fill={fill}
             cursor={canBeSelected ? "pointer" : ""} // Add cursor property to make mouse icon a hand
             r={isMobile ? squareSize / 30 : squareSize / 40}
             onClick={() => onClick()} />
@@ -89,10 +105,15 @@ export function Game() {
     const [isClient, setIsClient] = useState<boolean>(false)
     const [prevWords, setPrevWords] = useState<LetterStep[][]>([])
     const [letterSteps, setLetterSteps] = useState<LetterStep[]>([])
-    const [snackOpen, setSnackOpen] = useState(false)
+    const [invalidWordSnackOpen, setInvalidWordSnackOpen] = useState(false)
+    const [tooShortSnackOpen, setTooShortSnackOpen] = useState(false)
 
-    const handleSnackClose = () => {
-        setSnackOpen(false)
+    const handleInvalidWordSnackClose = () => {
+        setInvalidWordSnackOpen(false)
+    }
+
+    const handleTooShortSnackClose = () => {
+        setTooShortSnackOpen(false)
     }
 
     useEffect(() => {
@@ -116,6 +137,33 @@ export function Game() {
     useKeyPress(['Enter'], (event) => {
         submitWord();
     });
+
+    useGSAP(() => {
+        gsap.fromTo(".newestWord", {
+            strokeDasharray: function (index: any, target: any, targets: any) {
+                const dist = target.getTotalLength()
+
+                return `0px, ${dist}px`
+            }
+        }, {
+            stagger: .25,
+            duration: .25,
+            delay: .5,
+            strokeDasharray: function (index: number, target: SVGLineElement) {
+                const dist = target.getTotalLength()
+
+                return `${dist}px, ${dist}px`
+            },
+            onComplete: () => {
+                gsap.to(".inProgressWord", {
+                    opacity: 0, duration: .5, onComplete: () => {
+                        progressToNextWord()
+                    }
+                })
+
+            }
+        });
+    }, { dependencies: [prevWords] })
 
     const { width, height } = useWindowSize();
 
@@ -176,16 +224,24 @@ export function Game() {
         setPrevWords([])
     }
 
+    const progressToNextWord = () => {
+        const lastLetter = letterSteps.at(-1);
+        lastLetter && setLetterSteps([lastLetter])
+    }
+
     const submitWord = () => {
         const word = currentlyAssembledWord.toLowerCase()
         const valid = !!CEL.find(c => c === word)
 
         if (valid) {
             setPrevWords([...prevWords, letterSteps])
-            const lastLetter = letterSteps.at(-1);
-            lastLetter && setLetterSteps([lastLetter])
+
         } else {
-            setSnackOpen(true)
+            if (word.length < 3) {
+                setTooShortSnackOpen(true)
+            } else {
+                setInvalidWordSnackOpen(true)
+            }
         }
     }
 
@@ -240,6 +296,8 @@ export function Game() {
     }
 
     const lines = letterSteps.map((step, idx) => {
+        if (!letterSteps[idx + 1]) return;
+
         const [x, y] = letterStepToPosition(step)
         const [x2, y2] = letterStepToPosition(letterSteps[idx + 1] || step)
 
@@ -249,6 +307,7 @@ export function Game() {
             y1={y}
             x2={x2}
             y2={y2}
+            className="inProgressWord"
             stroke={PINK}
             strokeWidth="5"
             strokeDasharray={'10,10'}
@@ -259,15 +318,21 @@ export function Game() {
         const [x, y] = letterStepToPosition(step)
         const [x2, y2] = letterStepToPosition(word[idx + 1] || step)
 
+        let classes = ""
+        if (wordIdx === prevWords.length - 1) {
+            classes = "newestWord"
+        }
+
         return <line
             key={`prevLine-${idx}-${wordIdx}`}
             x1={x}
             y1={y}
             x2={x2}
             y2={y2}
+            className={classes}
             stroke={PINK}
             strokeWidth="5"
-            opacity={0.3}
+            opacity={0.5}
         />
     })).reduce((acc, val) => acc.concat(val), []);
 
@@ -299,11 +364,19 @@ export function Game() {
     return <div className="flex flex-col md:flex-row">
         <Snackbar
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            open={snackOpen}
-            onClose={handleSnackClose}
+            open={invalidWordSnackOpen}
+            onClose={handleInvalidWordSnackClose}
             message="Not a word"
             autoHideDuration={2500}
-            // key={vertical + horizontal}
+        // key={vertical + horizontal}
+        />
+        <Snackbar
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            open={tooShortSnackOpen}
+            onClose={handleTooShortSnackClose}
+            message="Too short"
+            autoHideDuration={2500}
+        // key={vertical + horizontal}
         />
         {(isClient && isWin) && <Confetti recycle={false} />}
         <div className="grow"></div>
